@@ -1,0 +1,12 @@
+{"id": "q01", "question": "How much does the Team plan cost per month?", "ground_truth": "The Team plan costs 99 dollars per month.", "relevant_ids": ["pricing.md#2"]}
+{"id": "q02", "question": "How many user seats does the Starter plan include?", "ground_truth": "The Starter plan includes 3 user seats.", "relevant_ids": ["pricing.md#1"]}
+{"id": "q03", "question": "Which plan includes single sign-on?", "ground_truth": "Single sign-on is included in the Enterprise plan.", "relevant_ids": ["pricing.md#3", "security.md#1"]}
+{"id": "q04", "question": "How long is the free trial, and is a credit card required?", "ground_truth": "The free trial lasts 14 days. No credit card is required to start the trial.", "relevant_ids": ["pricing.md#4"]}
+{"id": "q05", "question": "How long is raw event data retained?", "ground_truth": "Raw event data is retained for 13 months.", "relevant_ids": ["security.md#2"]}
+{"id": "q06", "question": "Which regions host customer data?", "ground_truth": "Customer data is hosted in Frankfurt and Virginia.", "relevant_ids": ["security.md#4"]}
+{"id": "q07", "question": "What is the API rate limit?", "ground_truth": "The API allows 600 requests per minute per workspace.", "relevant_ids": ["api.md#1"]}
+{"id": "q08", "question": "How are webhook requests signed?", "ground_truth": "Webhook requests are signed with an HMAC-SHA256 signature in the X-Northwind-Signature header.", "relevant_ids": ["api.md#3"]}
+{"id": "q09", "question": "How quickly do Team customers get a first support response?", "ground_truth": "Team customers get a first response within 8 business hours.", "relevant_ids": ["support.md#1"]}
+{"id": "q10", "question": "How much notice is given before planned maintenance?", "ground_truth": "Planned maintenance is announced at least 72 hours in advance.", "relevant_ids": ["support.md#3"]}
+{"id": "q11", "question": "What happens to data when a workspace is deleted?", "ground_truth": "All of the workspace's data is permanently removed within 30 days, including backups.", "relevant_ids": ["security.md#3"]}
+{"id": "q12", "question": "What is the maximum number of rows in a single API export?", "ground_truth": "A single export can contain at most 1 million rows.", "relevant_ids": ["api.md#4"]}

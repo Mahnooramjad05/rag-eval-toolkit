@@ -1,0 +1,37 @@
+# Example workflow to copy into your own RAG project.
+# It evaluates your pipeline on every pull request and fails the check
+# if faithfulness or retrieval quality drops below the thresholds.
+name: rag-quality-gate
+
+on:
+  workflow_dispatch:
+  # pull_request:            # uncomment in your project
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    env:
+      LLM_PROVIDER: anthropic                       # or openai
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[all]"
+
+      # Replace the adapter with your pipeline, e.g. python:my_app.rag:answer
+      # or the URL of a staging endpoint.
+      - name: Evaluate
+        run: |
+          rageval run --dataset data/sample_qa.jsonl --config configs/default.yaml \
+            --adapter python:examples.baseline_rag:answer_top3 --output-dir runs
+
+      - name: Quality gate
+        run: rageval gate "$(ls -t runs/*.json | head -1)" --thresholds configs/ci_gate.yaml
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rag-eval-report
+          path: runs/

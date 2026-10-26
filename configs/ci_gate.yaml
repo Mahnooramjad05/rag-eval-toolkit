@@ -1,0 +1,7 @@
+# Minimum average scores a run must reach for `rageval gate` to pass.
+# Start below your current baseline, then raise the bar as the pipeline improves.
+thresholds:
+  faithfulness: 0.80
+  answer_relevance: 0.70
+  context_recall: 0.70
+  recall@5: 0.80

@@ -1,0 +1,28 @@
+# Which metrics to compute. Remove any you don't need to save judge calls.
+metrics:
+  - retrieval          # hit_rate@k, recall@k, precision@k, ndcg@k, mrr (no LLM)
+  - faithfulness       # answer claims supported by retrieved context
+  - answer_relevance   # does the answer address the question
+  - context_precision  # relevant chunks ranked near the top
+  - context_recall     # ground-truth facts covered by retrieved context
+
+k_values: [1, 3, 5]
+max_concurrent_samples: 8
+output_dir: runs
+
+judge:
+  provider: mock          # mock | openai | anthropic  (LLM_PROVIDER env var overrides)
+  model: null             # null = provider default (JUDGE_MODEL env var overrides)
+  effort: low             # Anthropic only
+  max_concurrency: 4      # parallel judge requests
+  requests_per_minute: null
+  max_retries: 3
+  cache_path: .rageval_cache.sqlite
+  # Set these to your provider's current prices to get a cost estimate in reports.
+  input_cost_per_mtok: null
+  output_cost_per_mtok: null
+
+# Only used by the offline mock judge.
+mock:
+  support_threshold: 0.6
+  chunk_relevance_threshold: 0.35

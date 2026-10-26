@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG eval · {{ run.run_id }}</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --border: #e3e2dd;
+    --good: #2f7d4f; --warn: #b7791f; --bad: #c0392b; --na: #9a9a94; --bar-track: #ecebe6;
+    --accent: #3b5bdb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615; --panel: #1f1f1d; --text: #ecebe6; --muted: #a3a29c; --border: #34332f;
+      --good: #5cbf85; --warn: #e0a84a; --bad: #ef6f62; --na: #75746e; --bar-track: #2c2b28;
+      --accent: #7c95f5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.5 -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 36px 0 12px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .meta code { font-size: 12px; }
+  .banner { margin: 18px 0 0; padding: 10px 14px; border-radius: 8px; font-size: 14px;
+            border: 1px solid var(--warn); color: var(--warn); background: transparent; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 24px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .card .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+  .card .value { font-size: 30px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .good { color: var(--good); } .warn { color: var(--warn); } .bad { color: var(--bad); } .na { color: var(--na); }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .bars { display: grid; grid-template-columns: minmax(110px, 160px) 1fr 52px; gap: 6px 12px; align-items: center; }
+  .bars .name { font-size: 13px; color: var(--muted); font-family: ui-monospace, Consolas, monospace; }
+  .track { height: 10px; background: var(--bar-track); border-radius: 5px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 5px; }
+  .fill.good { background: var(--good); } .fill.warn { background: var(--warn); } .fill.bad { background: var(--bad); }
+  .bars .num { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  td.score { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+  details { margin-top: 6px; }
+  summary { cursor: pointer; color: var(--accent); font-size: 12px; }
+  .detail { margin: 8px 0 4px; padding-left: 10px; border-left: 2px solid var(--border); }
+  .detail h4 { margin: 8px 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .detail ul { margin: 0; padding-left: 18px; }
+  .detail li { margin: 3px 0; }
+  .reason { color: var(--muted); }
+  .usage td:first-child { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>RAG evaluation report</h1>
+  <div class="meta">
+    Run <code>{{ run.run_id }}</code> · dataset <code>{{ run.dataset }}</code> · judge <code>{{ run.judge }}</code>
+    · {{ run.samples | length }} samples · {{ run.created_at }}
+  </div>
+  {% if is_mock %}
+  <div class="banner">Scored with the offline mock judge (word-overlap heuristics). Use it for demos and tests;
+    run with an OpenAI or Anthropic judge for real scores.</div>
+  {% endif %}
+
+  <div class="cards">
+    {% for name, score in headline %}
+    <div class="card">
+      <div class="label">{{ name | replace("_", " ") }}</div>
+      <div class="value {{ score | band }}">{{ score | fmt }}</div>
+      <div class="meta">{{ run.coverage.get(name, 0) }} / {{ run.samples | length }} scored</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <h2>All metrics</h2>
+  <div class="panel bars">
+    {% for name in metric_names %}
+    {% set score = run.summary[name] %}
+    <div class="name">{{ name }}</div>
+    <div class="track"><div class="fill {{ score | band }}" style="width: {{ (score * 100) | round(1) }}%"></div></div>
+    <div class="num">{{ score | fmt }}</div>
+    {% endfor %}
+  </div>
+
+  <h2>Per-question results</h2>
+  <div class="panel table-wrap">
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Question</th>
+          {% for name in table_metrics %}<th>{{ name | replace("_", " ") }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+      {% for s in run.samples %}
+        <tr>
+          <td><code>{{ s.sample_id }}</code></td>
+          <td>
+            {{ s.question }}
+            <details>
+              <summary>Answer and judge reasoning</summary>
+              <div class="detail">
+                <h4>Answer</h4>
+                <div>{{ s.answer or "(no answer)" }}</div>
+                {% for name, m in s.metrics.items() %}
+                  {% if m.details.get("claims") or m.details.get("ground_truth_claims") %}
+                    <h4>{{ name | replace("_", " ") }}</h4>
+                    <ul>
+                    {% for c in (m.details.get("claims") or m.details.get("ground_truth_claims")) %}
+                      <li><span class="{{ 'good' if c.supported else 'bad' }}">{{ "✓" if c.supported else "✗" }}</span>
+                        {{ c.claim }} <span class="reason">— {{ c.reason }}</span></li>
+                    {% endfor %}
+                    </ul>
+                  {% elif m.details.get("chunks") %}
+                    <h4>{{ name | replace("_", " ") }}</h4>
+                    <ul>
+                    {% for c in m.details.chunks %}
+                      <li><span class="{{ 'good' if c.relevant else 'bad' }}">#{{ c.rank }} {{ "relevant" if c.relevant else "not relevant" }}</span>
+                        <span class="reason">— {{ c.reason }}</span></li>
+                    {% endfor %}
+                    </ul>
+                  {% elif m.details.get("reason") %}
+                    <h4>{{ name | replace("_", " ") }}</h4>
+                    <div><span class="reason">{{ m.details.reason }}</span></div>
+                  {% elif m.details.get("error") %}
+                    <h4>{{ name | replace("_", " ") }}</h4>
+                    <div class="bad">Error: {{ m.details.error }}</div>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            </details>
+          </td>
+          {% for name in table_metrics %}
+          {% set m = s.metrics.get(name) %}
+          {% set score = m.score if m else none %}
+          <td class="score {{ score | band }}">{{ score | fmt }}</td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Judge usage</h2>
+  <div class="panel">
+    <table class="usage">
+      <tr><td>Judge calls</td><td>{{ run.usage.calls }}</td></tr>
+      <tr><td>Cache hits</td><td>{{ run.usage.cache_hits }}</td></tr>
+      <tr><td>Input / output tokens</td><td>{{ run.usage.input_tokens }} / {{ run.usage.output_tokens }}</td></tr>
+      <tr><td>Total judge latency</td><td>{{ run.usage.latency_s }} s</td></tr>
+      <tr><td>Estimated cost</td><td>{{ "$%.4f" | format(run.usage.est_cost_usd) if run.usage.est_cost_usd is not none else "not configured" }}</td></tr>
+    </table>
+  </div>
+</main>
+</body>
+</html>
